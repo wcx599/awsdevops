@@ -1,5 +1,5 @@
-aws_id: AKIAYILO7AX2P2SAUERA
-aws_key: QPfgQobCXk2fgYm/H9RdT/ir9lf0FWOmWu3BuSou
+aws_id:  
+aws_key:  
 aws_region: us-east-2
 ssh_keyname: 
 remote_user: ansibleuser
