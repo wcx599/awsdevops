@@ -1,0 +1,24 @@
+---
+- name: AWS EC2 Automation Playbook
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - vars/info.yml
+
+ # tasks:
+ #   - name : terminate all ec2
+
+  tasks:
+    - name: terninate all ec2
+      ec2_instance:
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+        state: absent
+        filters:
+          instance-state-name: running
+
+    - name: Gather all instance info 
+      ec2_instance_info:
+

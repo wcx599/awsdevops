@@ -1,0 +1,12 @@
+---
+- name: AWS EC2 Automation Playbook
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - vars/info.yml
+
+  tasks:
+    - name: create a VPC
+
+    

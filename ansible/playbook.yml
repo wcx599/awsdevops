@@ -1,0 +1,146 @@
+---
+- name: AWS EC2 Automation Playbook
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - vars/info.yml
+
+  tasks:
+    - name: create a VPC
+      ec2_vpc_net:
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+        name: test_vpc_net
+        cidr_block: 10.0.0.0/16
+        tags:
+          module: ec2_vpc_net
+        tenancy: default
+  
+      register: ansibleVPC
+
+    - name: Display the ansibleVPC output 
+      debug:
+        var: ansibleVPC
+
+    - name: Create a subnet 
+      ec2_vpc_subnet:
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+        state: present
+        cidr: 10.0.0.0/24
+        vpc_id: "{{ ansibleVPC.vpc.id }}"
+        map_public: yes
+        tags:
+          Name: public_subnet 
+      register: public_subnet
+
+    - name: Display the public_subnet output 
+      debug:
+        var: public_subnet
+
+    - name: Create a security group 
+      ec2_group:
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+        name: "Test Security Group"
+        description: "Test Security Group"
+        vpc_id: "{{ ansibleVPC.vpc.id }}"
+        tags:
+          Name: Test Security Group
+        rules:
+          - proto: "tcp"
+            ports: "22"
+            cidr_ip: 124.64.16.220/32
+      register: my_vpc_sg
+
+    - name: Display the my_vpc_sg output 
+      debug:
+        var: my_vpc_sg
+
+    - name: Create an internet gateway 
+      ec2_vpc_igw:
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+        state: present
+        vpc_id: "{{  ansibleVPC.vpc.id }}"
+        tags:
+          Name: ansibleVPC_IGW
+      register: ansibleVPC_IGW
+
+    - name: Display the ansibleVPC_IGW output
+      debug:
+        var: ansibleVPC_IGW
+
+
+
+    - name: Find Redhat AMIs
+      ec2_ami_info:
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+        owner: 309956199498  # redhat owner id
+        filters:
+          architecture: x86_64
+          name: RHEL-8*HVM-*
+      register: amis
+
+    - name: Display the amis output
+      debug:
+        var: amis
+
+    - name: Store the latest version
+      set_fact:
+        latest_ami: "{{ amis.images | sort(attribute='creation_date') | last }}"
+
+    - name: Display the latest_ami output
+      debug:
+        var: latest_ami
+
+
+    - name: Create SSH key
+      ec2_key:
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+        name: my_keypair
+ #     register: ec2_key_result
+
+ #   - name: Display key pair
+ #     debug:
+ #       var: ec2_key_result
+
+ #   - name: Save private key
+ #    copy: content=" {{ ec2_key_result.key.private_key }}" dest="./demo_key.pem" mode=0600
+ #    when: ec2_key_result.changed 
+
+    - name: Basic EC2 instance provisioning
+      ec2:
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+        image: "{{ latest_ami.image_id }}"
+        instance_type: t2.micro
+        key_name: my_keypair
+        count: 1
+        state: present
+        group_id : "{{ my_vpc_sg.group_id }}"
+        wait: yes
+        vpc_subnet_id : "{{ public_subnet.subnet.id }}"
+        assign_public_ip: yes
+        instance_tags:
+          Name: new_demo_template
+      register: ec2info
+
+    - name: Display the ec2info output
+      debug:
+        var: ec2info
+
+
+
+
+

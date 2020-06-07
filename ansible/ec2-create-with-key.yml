@@ -1,0 +1,39 @@
+---
+- name: AWS EC2 Automation Playbook
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - vars/info.yml
+
+#  vars:
+#    - key_pair : 'newkeytest'
+
+  tasks:
+
+    - name: Basic EC2 instance provisioning
+      ec2:
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+        image: ami-0a54aef4ef3b5f881
+#        image: "{{ latest_ami.image_id }}"
+        instance_type: t2.micro
+        key_name: newkeytest
+        count: 1
+        state: present
+        group_id : sg-0dca1bad7b64eb0c0
+        wait: yes
+        vpc_subnet_id : subnet-090577371f313d01d
+        assign_public_ip: yes
+        instance_tags:
+          Name: new_demo_template
+      register: ec2info
+
+    - name: Display the ec2info output
+      debug:
+        var: ec2info
+
+
+    
+  

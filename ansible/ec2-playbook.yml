@@ -1,0 +1,52 @@
+---
+- name: AWS EC2 Automation Playbook
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - vars/info.yml
+
+  tasks:
+    - name: Find Redhat AMIs
+      ec2_ami_info:
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+        owner: 309956199498  # redhat owner id
+        filters:
+          architecture: x86_64
+          name: RHEL-8*HVM-*
+      register: amis
+
+    - name: Display the amis output
+      debug:
+        var: amis
+
+    - name: Store the latest version
+      set_fact:
+        latest_ami: "{{ amis.images | sort(attribute='creation_date') | last }}"
+
+    - name: Display the latest_ami output
+      debug:
+        var: latest_ami
+
+
+ #   - name: Create SSH key
+ #     ec2_key:
+ #       aws_access_key: "{{ aws_id }}"
+ #       aws_secret_key: "{{ aws_key }}"
+ #       region: "{{ aws_region }}"
+ #       name: my_keypair
+ #    not OK !!
+    - name: Create a new EC2 key
+      ec2_key:
+        name: ansible-ssh-key
+        aws_access_key: "{{ aws_id }}"
+        aws_secret_key: "{{ aws_key }}"
+        region: "{{ aws_region }}"
+      register: ec2_key_result
+ 
+    - name: Save private key
+      copy: content="{{ ec2_key_result.key.private_key }}" dest="./ansible-ssh-key.pem" mode=0600
+      when: ec2_key_result.changed
+
